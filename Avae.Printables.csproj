@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-gtk;net8.0-android;net8.0-ios;net8.0-macos;net8.0-windows10.0.19041.0;</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.0" />
+    <PackageReference Include="PDFtoImage" Version="5.1.1" />
+    <PackageReference Include="Svg.Skia" Version="3.2.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <PackageReference Include="Avalonia.Android" Version="11.3.0" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'gtk'">
+    <PackageReference Include="GtkSharp" Version="3.24.24.95" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <PackageReference Include="Avalonia.iOS" Version="11.3.0" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
+    <PackageReference Include="SkiaSharp.Views.WinUI" Version="3.119.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />    
+    <PackageReference Include="System.Drawing.Common" Version="9.0.9" />
+  </ItemGroup>
+
+</Project>
