@@ -48,7 +48,7 @@ namespace Avae.Printables
         {
             return Default.Print(title, visuals);
         }
-        public static Task Print(string title, string file, Stream stream)
+        public static Task Print(string title, string file, Stream? stream = null)
         {
             return Default.Print(title, file, stream);
         }
