@@ -20,7 +20,7 @@ namespace Avae.Printables
             pages = TxtHelper.PaginateTextByParagraphs(File.ReadAllText(file), (float)A4_WIDTH, (float)A4_HEIGHT);
         }
 
-        protected override async void Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
+        protected override async Task Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
         {
             var textblock = new TextBlock()
             {

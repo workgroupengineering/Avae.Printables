@@ -3,22 +3,88 @@ using Avalonia;
 using Avalonia.Skia.Helpers;
 using SkiaSharp;
 using System.Diagnostics;
+using WebKit;
 
 namespace Avae.Printables
 {
-    public class PrintingService : IPrintingService
+    public class PrintingService : IPrintingService<Task>
     {
-        public IEnumerable<IPrinter> GetPrinters()
+        public delegate Task PrintDelegate(string title, string file);
+
+        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
         {
-            return Enumerable.Empty<IPrinter>();
+            { ".pdf", PrintDefault },
+            {    ".jpeg" , PrintDefault },
+             {   ".bmp" , PrintDefault },
+              {  ".jpg" , PrintDefault },
+               { ".png" , PrintDefault },
+                {".ico" , PrintDefault },
+                {".gif" , PrintDefault },
+                {".htm" , PrintHtml },
+                {".html" , PrintHtml },
+        };
+        public Dictionary<string, PrintDelegate> Entries
+        {
+            get
+            {
+                return _entries;
+            }
+
         }
 
-        public Task Print(IPrinter printer, string file)
+        public class MyDelegate : WKNavigationDelegate
         {
-            throw new NotImplementedException();
+            private readonly TaskCompletionSource<bool> _tcs;
+            public MyDelegate(TaskCompletionSource<bool> tcs)
+            {
+                _tcs = tcs;
+            }
+
+            public override void DidFinishNavigation(WKWebView webView, WKNavigation navigation)
+            {
+                // HTML is fully loaded and laid out
+                _tcs.TrySetResult(true);
+            }
+
+            public override void DidFailNavigation(WKWebView webView, WKNavigation navigation, NSError error)
+            {
+                _tcs.TrySetResult(false);
+            }
         }
 
-        public Task Print(string title, string file, Stream? stream = null)
+        public static async Task PrintHtml(string title, string html)
+        {
+            var webView = new WKWebView(UIScreen.MainScreen.Bounds, new WKWebViewConfiguration());
+            var tcs = new TaskCompletionSource<bool>();
+
+            webView.NavigationDelegate = new MyDelegate(tcs);
+
+            var fileUrl = NSUrl.FromFilename(html); // full path to your HTML file
+            var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(html)); // directory containing the file
+
+            webView.LoadFileUrl(fileUrl, baseDir);
+            // Wait for load to finish
+            await tcs.Task;
+
+            var printController = UIPrintInteractionController.SharedPrintController;
+            var printInfo = UIPrintInfo.PrintInfo;
+            printInfo.JobName = title;
+            printInfo.OutputType = UIPrintInfoOutputType.General;
+
+            printController.PrintInfo = printInfo;
+            printController.PrintFormatter = webView.ViewPrintFormatter; // important
+
+            // 6️⃣ Present print UI
+            printController.Present(true, (controller, completed, err) =>
+            {
+                if (err != null)
+                    Console.WriteLine($"❌ Print failed: {err.LocalizedDescription}");
+                else if (completed)
+                    Console.WriteLine("✅ Document printed successfully");
+            });
+        }
+
+        public static Task PrintDefault(string title, string file)
         {
             var print = UIPrintInteractionController.SharedPrintController;
 
@@ -48,9 +114,22 @@ namespace Avae.Printables
             return Task.CompletedTask;
         }
 
-        public async Task Print(string title, IEnumerable<Visual> visuals)
+        public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
+        {
+            var ext = Path.GetExtension(file).ToLower();
+            if (Entries.TryGetValue(ext, out var entry))
+            {
+                await entry(title, file);
+            }
+            else
+            {
+                await PrintDefault(title, file);
+            }
+        }
+
+        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
         {            
-            await Print(title, await CreatePdfAsync(title, visuals));
+            await PrintAsync(await CreatePdfAsync(title, visuals), null, title);
         }
 
         public async Task<string> CreatePdfAsync(string title, IEnumerable<Visual> visuals)

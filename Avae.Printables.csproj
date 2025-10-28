@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Avae.Printables</PackageId>
-    <Version>1.0.2</Version>
+    <Version>2.0.1</Version>
     <Authors>cedricb</Authors>
     <Product>Avae.Printables</Product>
     <Description>Printing for avalonia</Description>
@@ -19,40 +19,42 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.0" />
-    <PackageReference Include="Svg.Skia" Version="3.2.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
-    <PackageReference Include="Moq" Version="4.20.72" />
-
+    <PackageReference Include="Avalonia" Version="11.1.3" />
+    <PackageReference Include="Avalonia.Skia" Version="11.1.3" />
+    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.3.0" />    
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="" />
     <None Include="Licence.md" Pack="true" PackagePath="" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-    <PackageReference Include="Avalonia.Android" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Android" Version="11.1.3" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
-    <PackageReference Include="Avalonia.Browser" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Browser" Version="11.1.3" />
+    <Content Include="build\Avae.Printables.targets" Pack="true" PackagePath="build\Avae.Printables.targets" />
+    <Content Include="printing.js" Pack="true" PackagePath="content\js\">
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+    </Content>
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser'">
     <PackageReference Include="PDFtoImage" Version="5.1.1" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'gtk'">    
     <PackageReference Include="GtkSharp" Version="3.24.24.95" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
+    <PackageReference Include="WebkitGtkSharp" Version="3.24.24.95" />
+    <PackageReference Include="Avalonia.X11" Version="11.1.3" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
-    <PackageReference Include="Avalonia.iOS" Version="11.3.0" />
+    <PackageReference Include="Avalonia.iOS" Version="11.1.3" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
-    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
+    <!--<PackageReference Include="Avalonia.Desktop" Version="11.1.3" />-->
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-    <PackageReference Include="Avalonia.Desktop" Version="11.1.0" />
     <PackageReference Include="SkiaSharp.Views.WinUI" Version="3.119.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />    
     <PackageReference Include="System.Drawing.Common" Version="9.0.9" />
   </ItemGroup>
-
+  
 </Project>

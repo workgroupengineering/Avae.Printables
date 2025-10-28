@@ -8,22 +8,23 @@ using Context = Android.Content.Context;
 
 namespace Avae.Printables
 {
+
     public static class Extensions
     {
 #if ANDROID
-        public static AppBuilder UsePrinting(this AppBuilder builder, Activity activity, Context context)
+        public static AppBuilder UsePrintables(this AppBuilder builder, Activity activity, Context context)
+#elif WINDOWS10_0_19041_0_OR_GREATER
+        public static AppBuilder UsePrintables(this AppBuilder builder, bool isHybrid = false)
 #else
-        public static AppBuilder UsePrinting(this AppBuilder builder)
+        public static AppBuilder UsePrintables(this AppBuilder builder)
 #endif
         {
 #if ANDROID
             Printable.SetDefault(new PrintingService(activity, context));
-#elif BROWSER || MACOS || IOS || WINDOWS10_0_19041_0_OR_GREATER || GTK
+#elif BROWSER || MACOS || IOS || GTK
             Printable.SetDefault(new PrintingService());
-#endif
-
-#if BROWSER
-
+#elif WINDOWS10_0_19041_0_OR_GREATER
+            Printable.SetDefault(new PrintingService(isHybrid));
 #endif
 
             return builder;
@@ -43,23 +44,28 @@ namespace Avae.Printables
         internal static void SetDefault(IPrintingService implementation) =>
             defaultImplementation = implementation;
 
+        public static Task PrintAsync(IEnumerable<Visual> visuals, string jobTitle = "Title")
+        {
+            return Default.PrintAsync(visuals, jobTitle);
+        }
+        public static Task PrintAsync(string file, Stream? stream = null, string jobTitle = "Title")
+        {
+            return Default.PrintAsync(file, stream, jobTitle);
+        }
 
-        public static Task Print(string title, IEnumerable<Visual> visuals)
+        public static Task PrintAsync(PrintablePrinter printer, string file)
         {
-            return Default.Print(title, visuals);
-        }
-        public static Task Print(string title, string file, Stream? stream = null)
-        {
-            return Default.Print(title, file, stream);
+            return Default.PrintAsync(printer, file);
         }
 
-        public static Task Print(IPrinter printer, string file)
+        public static Task PrintAsync(string jobTitle = "Title")
         {
-            return Default.Print(printer, file);
+            return Default.PrintAsync(jobTitle);
         }
-        public static IEnumerable<IPrinter> GetPrinters()
+
+        public static Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
         {
-            return Default.GetPrinters();
+            return Default.GetPrintersAsync();
         }
     }
 }

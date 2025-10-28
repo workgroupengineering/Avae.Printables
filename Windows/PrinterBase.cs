@@ -1,6 +1,5 @@
 ﻿#if WINDOWS10_0_19041_0_OR_GREATER
 using Avalonia;
-using Avalonia.Threading;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Printing;
 using Windows.Graphics.Printing;
@@ -24,9 +23,9 @@ namespace Avae.Printables
         /// A list of UIElements used to store the print preview pages.  This gives easy access
         /// to any desired preview page.
         /// </summary>
-        internal List<UIElement> printPreviewPages;
+        protected List<UIElement> printPreviewPages;
         internal IEnumerable<Visual> visuals;
-        internal string file;
+        protected string file;
         private string title;
         private IntPtr handle;
 
@@ -73,7 +72,7 @@ namespace Avae.Printables
         /// </summary>
         public virtual void UnregisterForPrinting()
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (printDocument != null)
                 {
@@ -113,17 +112,22 @@ namespace Avae.Printables
             });
         }
 
-        protected abstract void CreatePreview(double printableWidth, double printableHeight);
+        protected abstract Task CreatePreview(double printableWidth, double printableHeight);
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// This is the event handler for PrintDocument.Paginate. It creates print preview pages for the app.
         /// </summary>
         /// <param name="sender">PrintDocument</param>
         /// <param name="e">Paginate Event Arguments</param>
-        protected virtual void CreatePrintPreviewPages(object sender, PaginateEventArgs e)
+        protected virtual async void CreatePrintPreviewPages(object sender, PaginateEventArgs e)
         {
-            lock (printPreviewPages)
+            //using (await _mutex.LockAsync())
+            //{
+            try
             {
+                await _semaphore.WaitAsync();
+
                 printPreviewPages.Clear();
 
                 PrintTaskOptions printingOptions = (PrintTaskOptions)e.PrintTaskOptions;
@@ -133,11 +137,16 @@ namespace Avae.Printables
                 double printableWidth = imageableRect.Width;
                 double printableHeight = imageableRect.Height;
 
-                CreatePreview(printableWidth, printableHeight);
+                await CreatePreview(printableWidth, printableHeight);
 
                 PrintDocument printDoc = (PrintDocument)sender;
                 printDoc.SetPreviewPageCount(printPreviewPages.Count, PreviewPageCountType.Intermediate);
             }
+            finally
+            {
+                _semaphore.Release();
+            }
+            //}
         }
 
         /// <summary>
@@ -147,10 +156,18 @@ namespace Avae.Printables
         /// </summary>
         /// <param name="sender">PrintDocument</param>
         /// <param name="e">Arguments containing the preview requested page</param>
-        protected virtual void GetPrintPreviewPage(object sender, GetPreviewPageEventArgs e)
+        protected virtual async void GetPrintPreviewPage(object sender, GetPreviewPageEventArgs e)
         {
-            PrintDocument printDoc = (PrintDocument)sender;
-            printDoc.SetPreviewPage(e.PageNumber, printPreviewPages[e.PageNumber - 1]);
+            await _semaphore.WaitAsync(); // ⏳ waits until CreatePrintPreviewPages is done
+            try
+            {
+                PrintDocument printDoc = (PrintDocument)sender;
+                printDoc.SetPreviewPage(e.PageNumber, printPreviewPages[e.PageNumber - 1]);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         /// <summary>

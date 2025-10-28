@@ -19,7 +19,7 @@ namespace Avae.Printables
         {
             NPages = visuals.Count();
         }
-        protected async override void Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
+        protected async override Task Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
         {
             var visual = visuals.ElementAt(page_nr);
 

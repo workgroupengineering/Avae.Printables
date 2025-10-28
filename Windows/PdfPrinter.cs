@@ -12,7 +12,7 @@ namespace Avae.Printables
         {
         }
 
-        protected override void CreatePreview(double printableWidth, double printableHeight)
+        protected override Task CreatePreview(double printableWidth, double printableHeight)
         {
             var images = PDFtoImage.Conversion.ToImages(File.ReadAllBytes(file));
             foreach (var bitmap in images)
@@ -31,6 +31,7 @@ namespace Avae.Printables
                 canvas.Invalidate(); // still needed to trigger paint
                 printPreviewPages.Add(canvas);
             }
+            return Task.CompletedTask;
         }
     }
 }

@@ -1,99 +1,128 @@
-# Avae.Linux.Essentials
+# Avae.Printables
 
-A port of Microsoft.Maui.Essentials tailored for Avalonia.Linux, bringing essential cross-platform APIs to your Avalonia-based linux applications. This package simplifies access to common device and application features.
+A crossplatform library for printing.
 
 # Features
 
-Cross-Platform Essentials: Leverage APIs from Microsoft.Maui.Essentials adapted for linux environments.
+Cross-Platform : Leverage APIs adapted for multiple environments.
 
 MIT Licensed: Freely use, modify, and distribute under the permissive MIT License.
 
 # Getting Started
 
-Follow these steps to integrate Avae.Linux.Essentials into your Avalonia.Linux project.
+Follow these steps to integrate Avae.Printables into your Avalonia project.
 
 # Prerequisites
 
-An Avalonia.Linux project set up with .NET.
+An Avalonia project set up with .NET.
 
 # Installation
 
-1. Add Microsoft.Maui.Essentials to Your Shared Project
-
-In your shared project’s .csproj file, include the Microsoft.Maui.Essentials package. Use one of the following methods
-````
-<UseMauiEssentials>true</UseMauiEssentials>
-````
-OR
-````
-<PackageReference Include="Microsoft.Maui.Essentials">
-    <PrivateAssets>all</PrivateAssets>
-</PackageReference>
-````
+Add Nuget Avae.Printables to Your Shared Project
 
 # Configuration
 
-1. Enable TextToSpeech
+Enable Printables.
 
 ````
- sudo apt install espeak -y
-````
-
-2. Enable Geolocation
-
-````
- sudo apt install geoclue-2.0 -y
-````
-
-3. Enable MediaPicker, you must have libcvextern.so. Consider is in an Native folder
-
-````
- using Microsoft.Maui.ApplicationModel;
+ using Avae.Printables;
  public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
-            .UseMauiEssentials((architecture) => "YourProject.Native.libcvextern.so")
+            .UsePrintables()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
 ````
+Android
 
-# Usage
-
-Once installed, you can use Microsoft.Maui.Essentials APIs within your Avalonia.Linux application. For example, access application information via AppInfo.
-
-# Example: Accessing AppInfo
 ````
-using Microsoft.Maui.Essentials;
-
-string appName = AppInfo.Name;
-string appVersion = AppInfo.VersionString;
+protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
+{
+    return base.CustomizeAppBuilder(builder)
+        .UsePrintables(this, this)
+        .WithInterFont()
+        .UseReactiveUI();
+}
 ````
+
+iOS
+````
+protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
+{
+    return base.CustomizeAppBuilder(builder)
+        .UsePrintables()
+        .WithInterFont()
+        .UseReactiveUI();
+}
+````
+
+Browser (Please add nuget package Avae.Printables to project to make sure printing.js in wwwroot folder)
+
+````
+private static Task Main(string[] args) => BuildAvaloniaApp()
+            .WithInterFont()
+             .StartBrowserAppAsync("out").ContinueWith(async t =>
+             {
+                 await JSHost.ImportAsync("printing", "/printing.js");
+             });
+
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePrintables();
+````
+
+Linux (the following workflow is required)
+
+https://github.com/lytico/GtkSharp.Workload
+
+# Example: Print MainView
+
+````
+using Avae.Printable;
+
+Printables.PrintAsync();
+
+````
+
+# Example: Print visuals
+
+````
+using Avae.Printable;
+
+var visual = Application.Current.ApplicationLifetime
+            is ISingleViewApplicationLifetime singleViewApplicationLifetime ? singleViewApplicationLifetime.MainView :
+            (Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        
+var panel = new Grid()
+{
+    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
+};
+panel.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+panel.Children.Add(new TextBlock()
+{
+    Text = "Hello",
+    FontSize = 60,
+    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+});
+
+await Printable.PrintAsync([visual, panel]);
+   
+````
+
 # Built With
 
 This package builds upon the excellent work of:
 
-Microsoft.Maui.Essentials
-
 AvaloniaUI
 
-Emgu.CV
-
-SecureLocalStorage
-
-VCardParser
-
-TmdsDBus
+SkiaSharp
 
 # License
 
-Avae.Linux.Essentials is licensed under the MIT License.
+Avae.Printables is licensed under the MIT License.
 
 # Contributing
 
 Contributions are welcome! Please submit issues or pull requests to the GitHub repository. Ensure your code follows the project’s coding standards.
-
-# Acknowledgments
-
-Thanks to the Avalonia team for their robust UI framework.
-
-Gratitude to the MAUI team for providing cross-platform essentials.

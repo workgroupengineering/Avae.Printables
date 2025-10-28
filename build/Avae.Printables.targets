@@ -1,0 +1,23 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyPrintingJS" BeforeTargets="Build" 
+          Condition="'$(TargetPlatformIdentifier)' == 'browser'">
+    <!-- Source file path: resolve relative to this .targets file inside the NuGet package -->
+    <PropertyGroup>
+      <_PrintingJsSource>$(MSBuildThisFileDirectory)..\content\js\printing.js</_PrintingJsSource>
+      <_PrintingJsDest>$(MSBuildProjectDirectory)\wwwroot\printing.js</_PrintingJsDest>
+    </PropertyGroup>
+
+    <!-- Create wwwroot if it doesn't exist -->
+    <MakeDir Directories="$(MSBuildProjectDirectory)\wwwroot"
+             Condition="!Exists('$(MSBuildProjectDirectory)\wwwroot')" />
+
+    <!-- Fail early if source doesn't exist -->
+    <Error Text="printing.js not found at $(_PrintingJsSource)"
+           Condition="!Exists('$(_PrintingJsSource)')" />
+
+    <!-- Copy printing.js -->
+    <Copy SourceFiles="$(_PrintingJsSource)"
+          DestinationFiles="$(_PrintingJsDest)"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

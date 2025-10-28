@@ -11,7 +11,7 @@ namespace Avae.Printables
         {
         }
 
-        protected override void CreatePreview(double printableWidth, double printableHeight)
+        protected override Task CreatePreview(double printableWidth, double printableHeight)
         {
             var canvas = new SKXamlCanvas
             {
@@ -27,6 +27,7 @@ namespace Avae.Printables
             };
             canvas.Invalidate(); // still needed to trigger paint
             printPreviewPages.Add(canvas);
+            return Task.CompletedTask;
         }
     }
 }

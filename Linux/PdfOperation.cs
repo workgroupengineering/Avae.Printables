@@ -18,7 +18,7 @@ namespace Avae.Printables
              NPages = images.Count();
         }
 
-        protected override void Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
+        protected override Task Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight)
         {
             var image = images.ElementAt(page_nr);
 
@@ -30,6 +30,8 @@ namespace Avae.Printables
             using var cr = context.CairoContext;
             Gdk.CairoHelper.SetSourcePixbuf(cr, pixbuf, 0, 0);
             cr.Paint();
+            return Task.CompletedTask;
+
         }
     }
 }

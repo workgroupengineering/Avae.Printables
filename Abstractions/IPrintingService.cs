@@ -1,17 +1,49 @@
 ﻿using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace Avae.Printables
 {
-    public interface IPrintingService
+    public interface IPrintingService<T> : IPrintingService
     {
-        Task Print(string title, IEnumerable<Visual> visuals);
-        Task Print(string title, string file, Stream? stream = null);
-        Task Print(IPrinter printer, string file);
-        IEnumerable<IPrinter> GetPrinters();
+        Dictionary<string, Func<string, string, T>> Entries
+        {
+            get
+            {
+                return new Dictionary<string, Func<string, string, T>>();
+            }
+        }
     }
 
-    public interface IPrinter
+    public interface IPrintingService
     {
-        string Name { get; set; }
+        internal Visual GetVisual()
+        {
+            return Avalonia.Application.Current!.ApplicationLifetime
+            is ISingleViewApplicationLifetime singleViewApplicationLifetime ? singleViewApplicationLifetime.MainView! :
+            (Avalonia.Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow!;
+        }        
+
+        Task PrintAsync(string title = "Title")
+        {
+            var visual = GetVisual();
+            return PrintAsync([visual], title);
+        }
+
+        Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title");
+        Task PrintAsync(string file, Stream? stream = null, string title = "Title");
+        Task PrintAsync(PrintablePrinter printer, string file)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
+        {
+            return Task.FromResult(Enumerable.Empty<PrintablePrinter>());
+        }
+    }
+
+    public class PrintablePrinter
+    {
+        public string Name { get; set; }
     }
 }

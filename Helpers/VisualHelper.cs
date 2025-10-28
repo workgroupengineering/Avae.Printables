@@ -1,6 +1,8 @@
 ﻿using Avalonia;
 using Avalonia.Layout;
 using SkiaSharp;
+using Rect = Avalonia.Rect;
+using Size = Avalonia.Size;
 
 namespace Avae.Printables
 {

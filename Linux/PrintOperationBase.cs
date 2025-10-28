@@ -1,5 +1,6 @@
 ﻿#if GTK
 using Gtk;
+using System.Threading.Tasks;
 
 namespace Avae.Printables
 {
@@ -8,12 +9,12 @@ namespace Avae.Printables
         public PrintOperationBase(string title)
         {
             EmbedPageSetup = true;
-            ExportFilename = title;
+            ExportFilename = title; 
         }
 
         protected abstract void SetNbPages();
 
-        protected abstract void Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight);
+        protected abstract Task Draw(PrintContext context, int page_nr, double printableWidth, double printableHeight);
 
         protected override void OnBeginPrint(PrintContext context)
         {
@@ -22,14 +23,13 @@ namespace Avae.Printables
             SetNbPages();
         }
 
-        protected override void OnDrawPage(PrintContext context, int pageNr)
+        protected override async void OnDrawPage(PrintContext context, int pageNr)
         {
             base.OnDrawPage(context, pageNr);
 
             double printableWidth = this.DefaultPageSetup.GetPageWidth(Unit.Points);
             double printableHeight = this.DefaultPageSetup.GetPageHeight(Unit.Points);
-            Draw(context, pageNr, printableWidth, printableHeight);
-
+            await Draw(context, pageNr, printableWidth, printableHeight);
         }
     }
 }

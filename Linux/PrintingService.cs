@@ -1,52 +1,118 @@
 ﻿#if GTK
-using Avalonia.Skia.Helpers;
+using Avalonia.X11.Interop;
 using Gtk;
-using Moq;
-using SkiaSharp;
+using System.Net;
+using WebKit;
+using Path = System.IO.Path;
 
 namespace Avae.Printables
-{
-    public class PrintingService : IPrintingService
+{  
+    public class PrintingService : IPrintingService<Task<PrintOperationBase>>
     {
-        public IEnumerable<IPrinter> GetPrinters()
+        public delegate Task<PrintOperationBase> PrintDelegate(string title, string file);
+
+
+        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
+        {
+            { ".pdf", PrintPdf },
+            {    ".jpeg" ,PrintImage },
+            {   ".bmp" , PrintImage },
+            {  ".jpg" , PrintImage },
+            { ".png" , PrintImage },
+            {".ico" , PrintImage },
+            {".gif" , PrintImage },
+            {".htm" , PrintHtml },
+            {".html" , PrintHtml },
+        };
+        public Dictionary<string, PrintDelegate> Entries
+        {
+            get
+            {
+                return _entries;
+            }
+
+        }
+
+        private static Task<PrintOperationBase> PrintPdf(string title, string file)
+        {
+            return Task.FromResult<PrintOperationBase>(new PdfOperation(title, file));
+        }
+
+        private static Task<PrintOperationBase> PrintImage(string title, string file)
+        {
+            return Task.FromResult<PrintOperationBase>(new ImageOperation(title, file));
+        }
+
+        public Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
         {
             Gtk.Application.Init();
-            var printers = new List<IPrinter>();
+            var printers = new List<PrintablePrinter>();
             
             Printer.EnumeratePrinters(new PrinterFunc(p =>
             {
-                var moq = new Mock<IPrinter>();
-                moq.Setup(m => m.Name).Returns(p.Name);
-                printers.Add(moq.Object);
+                var moq = new PrintablePrinter()
+                {
+                   Name= p.Name
+                };
+                printers.Add(moq);
                 return false;
             }), false);
-            return printers;
+            return Task.FromResult(printers.AsEnumerable());
         }
 
-        public Task Print(IPrinter printer, string file)
+        public static Task<PrintOperationBase> PrintHtml(string title, string file)
         {
-            return Task.CompletedTask;
+            float A4_WIDTH = 595.28f;
+            // Must run on GTK main thread
+            _ = GtkInteropHelper.RunOnGlibThread(() =>
+            {
+                var view = new WebView()
+                {                    
+                    WidthRequest = (int)A4_WIDTH
+                };
+                LoadChangedHandler? handler = null!;
+                view.LoadChanged += handler = (s, e) =>
+                {
+                    if (e.LoadEvent == LoadEvent.Finished)
+                    {
+                        view.LoadChanged -= handler;
+                        var op = new WebKit.PrintOperation(view);
+                        op.RunDialog();
+                    }
+                };
+
+                view.LoadUri("file://" + file);
+                return true;
+            });
+
+            return Task.FromResult<PrintOperationBase>(null!);
         }
-        
-        public Task Print(string title, string file, Stream? stream = null)
+
+        public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
         {
             Gtk.Application.Init();
 
-            PrintOperationBase operation = Path.GetExtension(file).ToLower() switch
+            file = file.Replace("file://", string.Empty);
+            var decodedPath = WebUtility.UrlDecode(file);
+            var ext = Path.GetExtension(decodedPath).ToLower();
+            
+            PrintOperationBase? operation = null!;
+            if (Entries.TryGetValue(ext, out var entry))
             {
-                ".pdf" => new PdfOperation(title, file),
-                ".jpeg" => new ImageOperation(title, file),
-                ".bmp" => new ImageOperation(title, file),
-                ".jpg" => new ImageOperation(title, file),
-                ".ico" => new ImageOperation(title, file),
-                ".svg" => new SvgOperation(title, file),
-                _ => new TxtOperation(title, file)
-            };
-            operation.Run(PrintOperationAction.PrintDialog, null);
-            return Task.CompletedTask;
+                operation = await entry(title, decodedPath);
+            }
+            else
+            {
+                operation = new TxtOperation(title, decodedPath);
+            }
+
+            if (operation != null)
+            {
+                operation.Run(PrintOperationAction.PrintDialog, null);
+            }
         }
 
-        public Task Print(string title, IEnumerable<Avalonia.Visual> visuals)
+        public Task PrintAsync(IEnumerable<Avalonia.Visual> visuals, string title = "Title")
         {
             Gtk.Application.Init();
             var operation = new VisualOperation(title, visuals);

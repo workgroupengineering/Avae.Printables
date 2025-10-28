@@ -1,9 +1,12 @@
 ﻿#if ANDROID
+using Android.App;
 using Android.Content;
 using Android.Graphics;
 using Android.Graphics.Pdf;
 using Android.Print;
 using Android.Print.Pdf;
+using Android.Text;
+using Android.Webkit;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -13,19 +16,45 @@ using Paint = Android.Graphics.Paint;
 
 namespace Avae.Printables
 {
-    public class PrintingService(Activity activity, Context context) : IPrintingService
+    public class PrintingService : IPrintingService<Task>
     {
-        public IEnumerable<IPrinter> GetPrinters()
+        Activity activity;
+        Context context;
+        public PrintingService(Activity activity, Context context)
         {
-            return Enumerable.Empty<IPrinter>();
+            this.activity = activity;
+            this.context = context;
         }
 
-        public Task Print(IPrinter printer, string file)
+        public delegate Task PrintDelegate(string title, string file);
+
+        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
         {
-            throw new NotImplementedException();
+            { ".pdf", PrintPdf },
+            {    ".jpeg" ,PrintImage },
+             {   ".bmp" , PrintImage },
+              {  ".jpg" , PrintImage },
+               { ".png" , PrintImage },
+                {".ico" , PrintImage },
+                {".gif" , PrintImage },
+                {".htm" , PrintHtml },
+                {".html" , PrintHtml },
+        };
+        public Dictionary<string, PrintDelegate> Entries
+        {
+            get
+            {
+                return _entries;
+            }
+
         }
 
-        private async Task PrintTxt(string title, string file)
+        private static Task PrintImage(string title, string file)
+        {
+            return ((PrintingService)Printable.Default).PrintAsync(BitmapToPdf(file), null, title);
+        }
+
+        private static async Task PrintTxt(string title, string file)
         {
             const float pageWidth = 612f;  // Letter portrait
             const float pageHeight = 792f;
@@ -46,11 +75,26 @@ namespace Avae.Printables
 
                 visuals.Add(textBlock);
             }
-            await Print(title, visuals);
+            await ((PrintingService)Printable.Default).PrintAsync(visuals, title);
         }
 
-        private Task PrintPdf(string title, string file)
+        public static Task PrintHtml(string title, string file)
         {
+            var activity = ((PrintingService)Printable.Default).activity;
+            var context = ((PrintingService)Printable.Default).context;
+
+            var webView = new WebView(activity);
+            webView.LoadDataWithBaseURL(null, File.ReadAllText(file), "text/html", "utf-8", null);
+            var printManager = (PrintManager)context.GetSystemService(Context.PrintService);
+            var printAdapter = webView.CreatePrintDocumentAdapter("MyHTMLDocument");
+            printManager.Print(title, printAdapter, null);
+            return Task.CompletedTask;
+        }
+
+        private static Task PrintPdf(string title, string file)
+        {
+            var activity = ((PrintingService)Printable.Default).activity;
+
             var printManager = (PrintManager)activity.GetSystemService(Context.PrintService);
 
             // Now we can use the preexisting print helper class
@@ -61,56 +105,30 @@ namespace Avae.Printables
             return Task.CompletedTask;
         }
 
-        public async Task Print(string title, string file, Stream? stream = null)
+        public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
         {
-            Task task = System.IO.Path.GetExtension(file).ToLower() switch
+            var ext = System.IO.Path.GetExtension(file).ToLower();
+            if(Entries.TryGetValue(ext,out var task))
             {
-                ".pdf" => PrintPdf(title, file),
-                ".jpeg" => Print(title, BitmapToPdf(file)),
-                ".bmp" => Print(title, BitmapToPdf(file)),
-                ".jpg" => Print(title, BitmapToPdf(file)),
-                ".ico" => Print(title, BitmapToPdf(file)),
-                _ => PrintTxt(title, file)
-            };
-            await task;
+                await task(title, file);
+            }
+            else
+            {
+                await PrintTxt(title, file);
+            }
         }
 
-        //private string SvgToPdf(string file)
-        //{
-        //    using var image = new SKSvg();
-        //    image.Load(file);
-        //    using PrintedPdfDocument pdf = new PrintedPdfDocument(context,
-        //    new PrintAttributes.Builder()
-        //            .SetMediaSize(PrintAttributes.MediaSize.IsoA4) // A4 size
-        //            .SetMinMargins(new PrintAttributes.Margins(0, 0, 0, 0))
-        //            .Build());
-
-        //    var pageInfo = new PdfDocument.PageInfo.Builder(bitmap.Width, bitmap.Height, 1).Create();
-        //    var page = pdf.StartPage(pageInfo);
-
-        //    // Draw the bitmap on the page
-        //    var canvas = page.Canvas;
-        //    canvas.DrawPicture(image., 0, 0);
-
-        //    pdf.FinishPage(page);
-
-        //    var path = System.IO.Path.GetTempPath() + "test.pdf";
-        //    using var temp = new FileStream(System.IO.Path.GetTempPath() + "test.pdf", FileMode.Create);
-        //    pdf.WriteTo(temp);
-        //    return path;
-        //}
-
-        private string BitmapToPdf(string file)
+        private static string BitmapToPdf(string file)
         {
-            var bitmap = BitmapFactory.DecodeFile(file);
-            using PrintedPdfDocument pdf = new PrintedPdfDocument(context,
+            using var bitmap = BitmapFactory.DecodeFile(file);
+            using PrintedPdfDocument pdf = new PrintedPdfDocument(((PrintingService)Printable.Default).context,
             new PrintAttributes.Builder()
                     .SetMediaSize(PrintAttributes.MediaSize.IsoA4) // A4 size
                     .SetMinMargins(new PrintAttributes.Margins(0, 0, 0, 0))
                     .Build());
 
-            var pageInfo = new PdfDocument.PageInfo.Builder(bitmap.Width, bitmap.Height, 1).Create();
-            var page = pdf.StartPage(pageInfo);
+            using var pageInfo = new PdfDocument.PageInfo.Builder(bitmap.Width, bitmap.Height, 1).Create();
+            using var page = pdf.StartPage(pageInfo);
 
             // Draw the bitmap on the page
             var canvas = page.Canvas;
@@ -125,7 +143,7 @@ namespace Avae.Printables
             return path;
         }
 
-        public async Task Print(string title, IEnumerable<Visual> visuals)
+        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             const float pageWidth = 612f;  // Letter portrait
             const float pageHeight = 792f;
@@ -142,7 +160,7 @@ namespace Avae.Printables
             }
 
             doc.Close();
-            await Print(title, file);
+            await PrintAsync(file, null, title);
         }
     }
 }

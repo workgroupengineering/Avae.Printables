@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Avae.Printables</id>
+    <version>1.0.4</version>
+    <title>Avae Printables</title>
+    <authors>cedric56</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Avalonia print functionalities</description>
+    <summary>Avalonia print functionalities</summary>
+    <releaseNotes>Initial release of avae printables package</releaseNotes>
+    <copyright>Copyright (c) .NET Foundation and Contributors</copyright>
+    <license type="expression">MIT</license>
+
+    <dependencies>
+      <group targetFramework="net8.0" />
+    </dependencies>
+  </metadata>
+
+  <files>
+    <!-- README file -->
+    <file src="README.md" target="" />
+    
+    <!-- JavaScript content -->
+    <file src="content\js\printing.js" target="content\js" />
+    
+    <!-- Build targets -->
+    <file src="build\Avae.Printables.targets" target="build" />
+  </files>
+</package>
