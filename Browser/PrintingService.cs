@@ -90,7 +90,7 @@ namespace Avae.Printables
             return Invoke(file, stream, title);
         }
 
-        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
+        public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             float A4_WIDTH = 595.28f;
             float A4_HEIGHT = 841.89f;

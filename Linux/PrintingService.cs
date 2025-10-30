@@ -2,40 +2,21 @@
 using Avalonia.X11.Interop;
 using Gtk;
 using SkiaSharp;
+using System.Diagnostics;
 using System.Net;
+using System.Runtime.InteropServices;
 using WebKit;
 using Path = System.IO.Path;
 
 namespace Avae.Printables
 {  
-    public class PrintingService : IPrintingService
+    public class PrintingService : PrintingBase, IPrintingService
     {
-    //public delegate Task<string> ConversionDelegate(string file);
-    //    public Dictionary<string, ConversionDelegate> Conversions = new Dictionary<string, ConversionDelegate>()
-    //    {
-    //        {    ".jpeg" , ConvertImageToPdf },
-    //         {   ".bmp" , ConvertImageToPdf },
-    //          {  ".jpg" , ConvertImageToPdf },
-    //           { ".png" , ConvertImageToPdf },
-    //            {".ico" , ConvertImageToPdf },
-    //            {".gif" , ConvertImageToPdf },
-    //        {".pdf" , (file) => Task.FromResult(file) },
-    //    };
-
-        //public static Task<string> ConvertImageToPdf(string file)
-        //{
-        //    var temp = Path.GetTempPath() + "temp.pdf";
-        //    using (var doc = SKDocument.CreatePdf(temp))
-        //    {
-        //        using var canvas = doc.BeginPage(595, 894);
-        //        using var bitmap = SKBitmap.Decode(file);
-        //        using var image = SKImage.FromBitmap(bitmap);
-        //        canvas.DrawImage(image, 0, 0);
-        //        doc.EndPage();
-        //        doc.Close();
-        //    }
-        //    return Task.FromResult(temp);
-        //}
+        public PrintingService()
+        {
+            Conversions.Add(".htm", HtmlToPdf);
+            Conversions.Add(".html", HtmlToPdf);
+        }
 
         public delegate Task<PrintOperationBase> PrintDelegate(string title, string file);
 
@@ -88,6 +69,50 @@ namespace Avae.Printables
             return Task.FromResult(printers.AsEnumerable());
         }
 
+        // P/Invoke for webkit_web_frame_print_full
+        [DllImport("libwebkitgtk-1.0.so.0")]
+        static extern void webkit_web_frame_print_full(IntPtr webFrame, IntPtr printOperation, int action);
+
+        // GTK_PRINT_OPERATION_ACTION enum
+        const int GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG = 0;
+        const int GTK_PRINT_OPERATION_ACTION_EXPORT = 1;
+
+        private static Task<string> HtmlToPdf(string file)
+        {
+            var temp = Path.GetTempPath() + "temp.pdf";
+            float A4_WIDTH = 595.28f;
+            float A4_HEIGHT = 841.89f;
+            // Must run on GTK main thread
+            _ = GtkInteropHelper.RunOnGlibThread(() =>
+            {
+                var view = new WebView()
+                {
+                    WidthRequest = (int)A4_WIDTH,
+                    HeightRequest = (int)A4_HEIGHT
+                };
+                LoadChangedHandler? handler = null!;
+                view.LoadChanged += handler = (s, e) =>
+                {
+                    if (e.LoadEvent == LoadEvent.Finished)
+                    {
+                        view.LoadChanged -= handler;
+                        var pdf = Path.GetTempPath() + "temp.pdf";
+                        var printOp = new WebKit.PrintOperation(view);
+                        printOp.PrintSettings = new PrintSettings()
+                        {
+                            OutputBin = pdf
+                        };
+                        IntPtr framePtr = view.Handle;
+                        // Call low-level print function
+                        webkit_web_frame_print_full(framePtr, printOp.Handle, GTK_PRINT_OPERATION_ACTION_EXPORT);
+                    }
+                };
+                view.LoadUri("file://" + file);
+                return true;
+            });
+            return Task.FromResult(temp);
+        }
+
         public static Task<PrintOperationBase> PrintHtml(string title, string file)
         {
             float A4_WIDTH = 595.28f;
@@ -103,7 +128,7 @@ namespace Avae.Printables
                 {
                     if (e.LoadEvent == LoadEvent.Finished)
                     {
-                        view.LoadChanged -= handler;
+                        view.LoadChanged -= handler;                        
                         var op = new WebKit.PrintOperation(view);
                         op.RunDialog();
                     }
@@ -140,12 +165,39 @@ namespace Avae.Printables
             }
         }
 
-        public Task PrintAsync(IEnumerable<Avalonia.Visual> visuals, string title = "Title")
+        public Task PrintVisualsAsync(IEnumerable<Avalonia.Visual> visuals, string title = "Title")
         {
             Gtk.Application.Init();
             var operation = new VisualOperation(title, visuals);
             operation.Run(PrintOperationAction.PrintDialog, null);
             return Task.CompletedTask;
+        }
+
+        public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
+        {
+            var ext = Path.GetExtension(file).ToLower();
+            if (Conversions.TryGetValue(ext, out var convertFunc))
+            {
+                file = await convertFunc(file);
+            }
+
+            ProcessStartInfo pStartInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/lp",
+                Arguments = $"-d \"{printer.Name}\" \"{Path.GetFullPath(file)}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            using var process = Process.Start(pStartInfo);
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            await process.WaitForExitAsync();
+
+            Console.WriteLine("STDOUT: " + stdout);
+            Console.WriteLine("STDERR: " + stderr);
+
+            return process.ExitCode == 0;
         }
     }
 }

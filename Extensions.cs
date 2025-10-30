@@ -74,7 +74,7 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous print operation.</returns>
         public static Task PrintAsync(IEnumerable<Visual> visuals, string jobTitle = "Title")
         {
-            return Default.PrintAsync(visuals, jobTitle);
+            return Default.PrintVisualsAsync(visuals, jobTitle);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous operation.</returns>
         public static Task PrintAsync(string jobTitle = "Title")
         {
-            return Default.PrintAsync(jobTitle);
+            return Default.PrintVisualAsync(jobTitle);
         }
 
         /// <summary>

@@ -10,8 +10,14 @@ using WebKit;
 
 namespace Avae.Printables
 {
-    public class PrintingService : IPrintingService
+    public class PrintingService : PrintingBase, IPrintingService
     {
+        public PrintingService()
+        {
+            Conversions.Add(".htm", HtmlToPdf);
+            Conversions.Add(".html", HtmlToPdf);
+        }
+
         public delegate Task PrintDelegate(string title, string file);
 
         private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
@@ -98,13 +104,28 @@ namespace Avae.Printables
 
                 visuals.Add(textBlock);
             }
-            await PrintVisualsAsync(visuals, title);
+            await ((PrintingService)Printable.Default).PrintVisualsAsync(visuals, title);
         }
 
-        public Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
+        public async Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
         {
             var printers = new List<PrintablePrinter>();
-            foreach (var name in NSPrinter.PrinterNames)
+            var psi = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/lpstat",
+                Arguments = "-p",
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            };
+
+            using var process = Process.Start(psi)!;
+            string output = process.StandardOutput.ReadToEnd();
+            await process.WaitForExitAsync();
+
+            // Extract printer names
+            foreach(var name in output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                         .Where(l => l.StartsWith("printer "))
+                         .Select(l => l.Split(' ')[1]))
             {
                 printers.Add(new PrintablePrinter()
                 {
@@ -112,19 +133,34 @@ namespace Avae.Printables
                 });
             }
 
-            return Task.FromResult(printers.AsEnumerable());
+            return printers.AsEnumerable();
         }
 
-        public Task PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
+        public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
-            ProcessStartInfo pStartInfo = new ProcessStartInfo();
-            pStartInfo.FileName = "lpr";
-            pStartInfo.Arguments = $"-P \"{printer.Name}\" \"{file}\"";
-            pStartInfo.UseShellExecute = false;
-            pStartInfo.CreateNoWindow = true;
-            Process.Start(pStartInfo);
+            var ext = Path.GetExtension(file).ToLower();
+            if (Conversions.TryGetValue(ext, out var convertFunc))
+            {
+                file = await convertFunc(file);
+            }
 
-            return Task.CompletedTask;
+            ProcessStartInfo pStartInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/lp",
+                Arguments = $"-d \"{printer.Name}\" \"{Path.GetFullPath(file)}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            using var process = Process.Start(pStartInfo);
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            await process.WaitForExitAsync();
+
+            Console.WriteLine("STDOUT: " + stdout);
+            Console.WriteLine("STDERR: " + stderr);
+
+            return process.ExitCode == 0;
         }
 
         public static Task PrintAsync(string title, NSView view)
@@ -147,6 +183,27 @@ namespace Avae.Printables
                 Frame = new CGRect(0, 0, image.Size.Width > A4_WIDTH ? A4_WIDTH : image.Size.Width, image.Size.Height > A4_HEIGHT ? A4_HEIGHT : image.Size.Height),
                 ImageScaling = NSImageScale.ProportionallyUpOrDown
             };
+        }
+
+        private static async Task<string> HtmlToPdf(string file)
+        {
+            using var webView = new WKWebView(new CGRect(0, 0, A4_WIDTH, A4_HEIGHT), new WKWebViewConfiguration());
+            var tcs = new TaskCompletionSource<bool>();
+
+            webView.NavigationDelegate = new NavigationDelegate(tcs);
+
+            using var fileUrl = NSUrl.FromFilename(file); // full path to your HTML file
+            using var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(file)); // directory containing the file
+
+            webView.LoadFileUrl(fileUrl, baseDir);
+            // Wait for load to finish
+            await tcs.Task;
+            await webView.EvaluateJavaScriptAsync(APPLY_CSS);
+            using var data = await webView.CreatePdfAsync(new WKPdfConfiguration());
+            var pdfPath = Path.GetTempPath() + "temp.pdf";
+            using var pdfUrl = NSUrl.FromFilename(pdfPath);
+            data.Save(pdfUrl, false);
+            return pdfPath;
         }
 
         public static async Task PrintHtml(string title, string file)
@@ -196,7 +253,7 @@ namespace Avae.Printables
             return PrintTxt(title, file);
         }
 
-        private static async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
+        public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             using var stream = new MemoryStream();
             using var doc = SKDocument.CreatePdf(stream);
@@ -216,11 +273,6 @@ namespace Avae.Printables
             using var data = NSData.FromStream(stream);
             if (data != null)
                 await PrintPdf(title, data);
-        }
-
-        public Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
-        {
-            return PrintVisualsAsync(visuals, title);   
         }
 
         private static Task PrintPdf(string title, NSData data)

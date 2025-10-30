@@ -61,7 +61,7 @@ namespace Avae.Printables
 
         public const long GENERIC_WRITE = (0x40000000L);        
         public const int CREATE_ALWAYS = 2;
-        public unsafe void Print(string printerName, string outputFilename, byte[] ticket, PdfDocument pdfDoc)
+        public unsafe bool Print(string printerName, string outputFilename, byte[] ticket, PdfDocument pdfDoc)
         {
             IStream? jobOutputStream = null;
             if (printerName.ToUpper().Contains("PDF")
@@ -113,7 +113,7 @@ namespace Avae.Printables
             {
                 WriteStreamToFile(jobOutputStream, outputFilename, CREATE_ALWAYS, (uint)GENERIC_WRITE);
             }
-
+            return true;
         }
 
         private unsafe IStream ArrayToIStream(byte[] data)

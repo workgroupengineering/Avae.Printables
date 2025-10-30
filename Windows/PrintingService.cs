@@ -3,7 +3,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Hosting;
-using SkiaSharp;
 using System.Drawing.Printing;
 using System.IO;
 using System.Printing;
@@ -12,22 +11,10 @@ using Windows.Storage;
 
 namespace Avae.Printables
 {
-    public class PrintingService : IPrintingService
+    public class PrintingService : PrintingBase, IPrintingService
     {
         public delegate Task<PrinterBase> PrintDelegate(string title, string file);
-        public delegate Task<string> ConversionDelegate(string file);
-        public Dictionary<string, ConversionDelegate> Conversions = new Dictionary<string, ConversionDelegate>()
-        {
-            { ".jpeg" , ImageHelper.ConvertToPdf },
-            { ".bmp" , ImageHelper.ConvertToPdf },
-            { ".jpg" , ImageHelper.ConvertToPdf },
-            { ".png" , ImageHelper.ConvertToPdf },
-            {".ico" , ImageHelper.ConvertToPdf },
-            {".gif" , ImageHelper.ConvertToPdf },
-            {".pdf" , (file) => Task.FromResult(file) },
-            {".htm" , HtmlHelper.ConvertToPdf },
-            {".html" , HtmlHelper.ConvertToPdf },
-        };
+        
 
         private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
         {
@@ -57,6 +44,9 @@ namespace Avae.Printables
 
                 WindowsXamlManager.InitializeForCurrentThread();
             }
+
+            Conversions.Add(".htm" , HtmlHelper.ConvertToPdf);
+            Conversions.Add(".html", HtmlHelper.ConvertToPdf);
         }
 
         public Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
@@ -93,21 +83,21 @@ namespace Avae.Printables
             return new PdfPrinter(GetActiveWindow(), title, await HtmlHelper.ConvertToPdf(file));
         }
 
-        public async Task PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
+        public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
             var ext = Path.GetExtension(file).ToLower();
             var service = (PrintingService)Printable.Default;
-            if (service.Conversions.TryGetValue(ext, out var conversion))
-            {
-                var p = LocalPrintServer.GetDefaultPrintQueue();
-                var ticket = p.UserPrintTicket.GetXmlStream().ToArray();
+            if (!service.Conversions.TryGetValue(ext, out var conversion))
+                throw new NotSupportedException($"The file extension '{ext}' is not supported for silent printing.");
 
-                var pdfFile = await StorageFile.GetFileFromPathAsync(await conversion(file));
-                var pdfDoc = await PdfDocument.LoadFromFileAsync(pdfFile);
+            var p = LocalPrintServer.GetDefaultPrintQueue();
+            var ticket = p.UserPrintTicket.GetXmlStream().ToArray();
 
-                var spool = new SpoolHelper();
-                spool.Print(printer.Name, ouputfilename, ticket, pdfDoc);
-            }
+            var pdfFile = await StorageFile.GetFileFromPathAsync(await conversion(file));
+            var pdfDoc = await PdfDocument.LoadFromFileAsync(pdfFile);
+
+            var spool = new SpoolHelper();
+            return spool.Print(printer.Name, ouputfilename, ticket, pdfDoc);
         }
 
         public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
@@ -130,7 +120,7 @@ namespace Avae.Printables
             }
         }
         
-        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
+        public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             var helper = new VisualPrinter(GetActiveWindow(), title, visuals);
             helper.RegisterForPrinting();

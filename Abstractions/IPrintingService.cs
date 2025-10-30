@@ -13,15 +13,15 @@ namespace Avae.Printables
             (Avalonia.Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow!;
         }        
 
-        Task PrintAsync(string title = "Title")
+        Task PrintVisualAsync(string title = "Title")
         {
             var visual = GetVisual();
-            return PrintAsync([visual], title);
+            return PrintVisualsAsync([visual], title);
         }
 
-        Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title");
+        Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title");
         Task PrintAsync(string file, Stream? stream = null, string title = "Title");
-        Task PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "")
+        Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "")
         {
             throw new NotImplementedException();
         }

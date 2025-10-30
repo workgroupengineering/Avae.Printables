@@ -127,7 +127,7 @@ namespace Avae.Printables
             }
         }
 
-        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
+        public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {            
             await PrintAsync(await CreatePdfAsync(title, visuals), null, title);
         }

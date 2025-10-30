@@ -75,7 +75,7 @@ namespace Avae.Printables
 
                 visuals.Add(textBlock);
             }
-            await ((PrintingService)Printable.Default).PrintAsync(visuals, title);
+            await ((PrintingService)Printable.Default).PrintVisualsAsync(visuals, title);
         }
 
         public static Task PrintHtml(string title, string file)
@@ -143,7 +143,7 @@ namespace Avae.Printables
             return path;
         }
 
-        public async Task PrintAsync(IEnumerable<Visual> visuals, string title = "Title")
+        public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             const float pageWidth = 612f;  // Letter portrait
             const float pageHeight = 792f;
