@@ -145,23 +145,7 @@ namespace Avae.Printables
 
         public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
-            const float pageWidth = 612f;  // Letter portrait
-            const float pageHeight = 792f;
-            
-            var temp = GetTempPdf();
-
-            using var doc = SKDocument.CreatePdf(temp);
-
-            foreach (var visual in visuals)
-            {
-                using var canvas = doc.BeginPage(pageWidth, pageHeight);
-                using var image = await VisualHelper.MeasureArrange(visual, pageWidth, pageHeight, DrawingContextHelper.RenderAsync);
-                canvas.DrawImage(image, 0, 0);
-                doc.EndPage();
-            }
-
-            doc.Close();
-            await PrintAsync(temp, null, title);
+            await PrintAsync(await CreatePdf_LETTER(visuals), null, title);
         }
     }
 }

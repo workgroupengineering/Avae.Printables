@@ -1,6 +1,5 @@
 ﻿#if IOS
 using Avalonia;
-using Avalonia.Skia.Helpers;
 using SkiaSharp;
 using System.Diagnostics;
 using WebKit;
@@ -9,30 +8,7 @@ namespace Avae.Printables
 {
     public class PrintingService :PrintingBase, IPrintingService
     {
-        public delegate Task PrintDelegate(string title, string file);
-
-        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
-        {
-            { ".pdf", PrintDefault },
-            {    ".jpeg" , PrintDefault },
-             {   ".bmp" , PrintDefault },
-              {  ".jpg" , PrintDefault },
-               { ".png" , PrintDefault },
-                {".ico" , PrintDefault },
-                {".gif" , PrintDefault },
-                {".htm" , PrintHtml },
-                {".html" , PrintHtml },
-        };
-        public Dictionary<string, PrintDelegate> Entries
-        {
-            get
-            {
-                return _entries;
-            }
-
-        }
-
-        public class MyDelegate : WKNavigationDelegate
+        private class MyDelegate : WKNavigationDelegate
         {
             private readonly TaskCompletionSource<bool> _tcs;
             public MyDelegate(TaskCompletionSource<bool> tcs)
@@ -50,6 +26,30 @@ namespace Avae.Printables
             {
                 _tcs.TrySetResult(false);
             }
+        }
+
+        public delegate Task PrintDelegate(string title, string file);
+
+        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
+        {
+            { ".pdf", PrintDefault },
+            {    ".jpeg" , PrintDefault },
+             {   ".bmp" , PrintDefault },
+              {  ".jpg" , PrintDefault },
+               { ".png" , PrintDefault },
+                {".ico" , PrintDefault },
+                {".gif" , PrintDefault },
+                {".htm" , PrintHtml },
+                {".html" , PrintHtml },
+        };
+
+        public Dictionary<string, PrintDelegate> Entries
+        {
+            get
+            {
+                return _entries;
+            }
+
         }
 
         public static async Task PrintHtml(string title, string html)
@@ -132,33 +132,9 @@ namespace Avae.Printables
             await PrintAsync(await CreatePdfAsync(title, visuals), null, title);
         }
 
-        public async Task<string> CreatePdfAsync(string title, IEnumerable<Visual> visuals)
+        public Task<string> CreatePdfAsync(string title, IEnumerable<Visual> visuals)
         {
-            // A4 size in points (1/72 inch)
-            const float A4_WIDTH = 595.28f;
-            const float A4_HEIGHT = 841.89f;
-
-            var temp = GetTempPdf();
-
-            using var stream = File.OpenWrite(temp);
-            using var document = SKDocument.CreatePdf(stream);
-
-            foreach (var visual in visuals)
-            {
-                using var page = document.BeginPage(A4_WIDTH, A4_HEIGHT);
-
-                // Render the Avalonia visual to a Skia image
-                using var image = await VisualHelper.Render(visual, A4_WIDTH, A4_HEIGHT, DrawingContextHelper.RenderAsync);
-
-                // Draw the image on the PDF canvas
-                page.DrawImage(image, new SKRect(0, 0, A4_WIDTH, A4_HEIGHT));
-
-                document.EndPage();
-            }
-
-            document.Close();
-
-            return temp;
+            return CreatePdf_A4(visuals, new SKRect(0, 0, A4_WIDTH, A4_HEIGHT));
         }
     }
 }

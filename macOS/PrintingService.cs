@@ -2,9 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Skia.Helpers;
 using PdfKit;
-using SkiaSharp;
 using System.Diagnostics;
 using WebKit;
 
@@ -12,52 +10,6 @@ namespace Avae.Printables
 {
     public class PrintingService : PrintingBase, IPrintingService
     {
-        public PrintingService()
-        {
-            Conversions.Add(".htm", HtmlToPdf);
-            Conversions.Add(".html", HtmlToPdf);
-        }
-
-        public delegate Task PrintDelegate(string title, string file);
-
-        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
-        {
-            { ".pdf", PrintPdf },
-            {    ".jpeg" ,PrintImage },
-             {   ".bmp" , PrintImage },
-              {  ".jpg" , PrintImage },
-               { ".png" , PrintImage },
-                {".ico" , PrintImage },
-                {".gif" , PrintImage },
-                {".htm" , PrintHtml },
-                {".html" , PrintHtml },
-        };
-        public Dictionary<string, PrintDelegate> Entries
-        {
-            get
-            {
-                return _entries;
-            }
-
-        }
-
-        const float A4_WIDTH = 595.28f;
-        const float A4_HEIGHT = 841.89f;
-        const string APPLY_CSS = @"
-            (function() {
-                var style = document.createElement('style');
-                style.textContent = `
-                    @media print {
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            color-adjust: exact !important;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            })();
-        ";
-
         private class NavigationDelegate : WKNavigationDelegate
         {
             private readonly TaskCompletionSource<bool> _tcs;
@@ -76,6 +28,51 @@ namespace Avae.Printables
             {
                 _tcs.TrySetResult(false);
             }
+        }
+
+        const string APPLY_CSS = @"
+            (function() {
+                var style = document.createElement('style');
+                style.textContent = `
+                    @media print {
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            })();
+        ";
+
+        public delegate Task PrintDelegate(string title, string file);
+
+        private Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
+        {
+            { ".pdf", PrintPdf },
+            {    ".jpeg" ,PrintImage },
+             {   ".bmp" , PrintImage },
+              {  ".jpg" , PrintImage },
+               { ".png" , PrintImage },
+                {".ico" , PrintImage },
+                {".gif" , PrintImage },
+                {".htm" , PrintHtml },
+                {".html" , PrintHtml },
+        };
+
+        public PrintingService()
+        {
+            Conversions.Add(".htm", HtmlToPdf);
+            Conversions.Add(".html", HtmlToPdf);
+        }
+       
+        public Dictionary<string, PrintDelegate> Entries
+        {
+            get
+            {
+                return _entries;
+            }
+
         }
 
         private static Task PrintImage(string title, string file)
@@ -258,21 +255,7 @@ namespace Avae.Printables
 
         public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
-            using var stream = new MemoryStream();
-            using var doc = SKDocument.CreatePdf(stream);
-
-            foreach (var visual in visuals)
-            {
-                using var canvas = doc.BeginPage(A4_WIDTH, A4_HEIGHT);
-                using var image = await VisualHelper.MeasureArrange(visual, A4_WIDTH, A4_HEIGHT, DrawingContextHelper.RenderAsync);
-                canvas.DrawImage(image, 0, 0);
-                doc.EndPage();
-            }
-
-            doc.Close();
-
-            stream.Position = 0;
-
+            using var stream = await CreatePdf_A4Stream(visuals);
             using var data = NSData.FromStream(stream);
             if (data != null)
                 await PrintPdf(title, data);

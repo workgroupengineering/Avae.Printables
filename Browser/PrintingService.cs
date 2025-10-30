@@ -1,8 +1,6 @@
 ﻿#if BROWSER
 using Avalonia;
-using Avalonia.Skia.Helpers;
 using Microsoft.AspNetCore.StaticFiles;
-using SkiaSharp;
 using System.Runtime.InteropServices.JavaScript;
 
 namespace Avae.Printables
@@ -14,6 +12,10 @@ namespace Avae.Printables
             public required string Base64 { get; set; }
             public required bool Stop { get; set; }
         }
+
+        [JSImport("printingInterop.print", "printing")]
+        public static partial void Print(string base64, string mime, string title);
+
         public delegate Task<Response> PrintDelegate(string file, Stream? stream);
 
         private static Dictionary<string, PrintDelegate> _entries = new Dictionary<string, PrintDelegate>()
@@ -46,9 +48,6 @@ namespace Avae.Printables
             return contentType;
         }
 
-        [JSImport("printingInterop.print", "printing")]
-        public static partial void Print(string base64, string mime, string title);
-
         public static async Task<Response> DefaultPrint(string file, Stream? stream)
         {
             if (stream is not null)
@@ -63,8 +62,8 @@ namespace Avae.Printables
                 return new Response() { Base64 = Convert.ToBase64String(bytes), Stop = false };
             }
         }
-
-        public static async Task Invoke(string file, Stream? stream = null, string title = "Title")
+        
+        public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
         {
             var ext = Path.GetExtension(file);
             string? base64 = null;
@@ -85,32 +84,9 @@ namespace Avae.Printables
             Print(base64, mime, title);
         }
 
-        public Task PrintAsync(string file, Stream? stream = null, string title = "Title")
-        {
-            return Invoke(file, stream, title);
-        }
-
         public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
-            float A4_WIDTH = 595.28f;
-            float A4_HEIGHT = 841.89f;
-
-            using var file = new MemoryStream();
-
-            using var doc = SKDocument.CreatePdf(file);
-
-            foreach (var visual in visuals)
-            {
-                using var canvas = doc.BeginPage(A4_WIDTH, A4_HEIGHT);
-                using var image = await VisualHelper.MeasureArrange(visual, A4_WIDTH, A4_HEIGHT, DrawingContextHelper.RenderAsync);
-                canvas.DrawImage(image, 0, 0);
-                doc.EndPage();
-            }
-
-            doc.Close();
-
-            string base64 = Convert.ToBase64String(file.ToArray());
-            Print(base64, "application/pdf", title);
+            Print(await CreatePdf_A4Base64(visuals), "application/pdf", title);
         }
     }
 }

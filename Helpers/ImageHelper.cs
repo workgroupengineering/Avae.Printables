@@ -1,10 +1,4 @@
 ﻿using SkiaSharp;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Avae.Printables
 {
@@ -15,7 +9,7 @@ namespace Avae.Printables
             var temp = PrintingBase.GetTempPdf();
             using (var doc = SKDocument.CreatePdf(temp))
             {
-                using var canvas = doc.BeginPage(595, 894);
+                using var canvas = doc.BeginPage(PrintingBase.A4_WIDTH, PrintingBase.A4_HEIGHT);
                 using var bitmap = SKBitmap.Decode(file);
                 using var image = SKImage.FromBitmap(bitmap);
                 canvas.DrawImage(image, 0, 0);
