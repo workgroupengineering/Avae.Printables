@@ -5,13 +5,34 @@ using SkiaSharp;
 using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
+using Weasyprint.Wrapped;
 using WebKit;
 using Path = System.IO.Path;
+using Printer = Weasyprint.Wrapped.Printer;
 
 namespace Avae.Printables
 {  
     public class PrintingService : PrintingBase, IPrintingService
     {
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+        private static Printer? printer;
+        public static async Task<Printer> WeasyPrinter()
+        {
+            if (printer == null)
+            {
+                await _semaphore.WaitAsync();
+                if (printer == null)
+                {
+                    printer = new Printer();
+                    await printer.Initialize();
+                }
+                _semaphore.Release();
+            }
+
+            return printer;
+        }
+
         public PrintingService()
         {
             Conversions.Add(".htm", HtmlToPdf);
@@ -52,65 +73,41 @@ namespace Avae.Printables
             return Task.FromResult<PrintOperationBase>(new ImageOperation(title, file));
         }
 
-        public Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
+        public async Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
         {
-            Gtk.Application.Init();
             var printers = new List<PrintablePrinter>();
-            
-            Printer.EnumeratePrinters(new PrinterFunc(p =>
+            var psi = new ProcessStartInfo
             {
-                var moq = new PrintablePrinter()
+                FileName = "lpstat",
+                Arguments = "-e",
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            };
+
+            using var process = Process.Start(psi)!;
+            string output = process.StandardOutput.ReadToEnd();
+            await process.WaitForExitAsync();
+
+            // Extract printer names
+            foreach(var name in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                printers.Add(new PrintablePrinter()
                 {
-                   Name= p.Name
-                };
-                printers.Add(moq);
-                return false;
-            }), false);
-            return Task.FromResult(printers.AsEnumerable());
+                    Name = name
+                });
+            }
+
+            return printers.AsEnumerable();
         }
 
-        // P/Invoke for webkit_web_frame_print_full
-        [DllImport("libwebkitgtk-1.0.so.0")]
-        static extern void webkit_web_frame_print_full(IntPtr webFrame, IntPtr printOperation, int action);
-
-        // GTK_PRINT_OPERATION_ACTION enum
-        const int GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG = 0;
-        const int GTK_PRINT_OPERATION_ACTION_EXPORT = 1;
-
-        private static Task<string> HtmlToPdf(string file)
+        private async static Task<string> HtmlToPdf(string file)
         {
-            var temp = Path.GetTempPath() + "temp.pdf";
-            float A4_WIDTH = 595.28f;
-            float A4_HEIGHT = 841.89f;
-            // Must run on GTK main thread
-            _ = GtkInteropHelper.RunOnGlibThread(() =>
-            {
-                var view = new WebView()
-                {
-                    WidthRequest = (int)A4_WIDTH,
-                    HeightRequest = (int)A4_HEIGHT
-                };
-                LoadChangedHandler? handler = null!;
-                view.LoadChanged += handler = (s, e) =>
-                {
-                    if (e.LoadEvent == LoadEvent.Finished)
-                    {
-                        view.LoadChanged -= handler;
-                        var pdf = Path.GetTempPath() + "temp.pdf";
-                        var printOp = new WebKit.PrintOperation(view);
-                        printOp.PrintSettings = new PrintSettings()
-                        {
-                            OutputBin = pdf
-                        };
-                        IntPtr framePtr = view.Handle;
-                        // Call low-level print function
-                        webkit_web_frame_print_full(framePtr, printOp.Handle, GTK_PRINT_OPERATION_ACTION_EXPORT);
-                    }
-                };
-                view.LoadUri("file://" + file);
-                return true;
-            });
-            return Task.FromResult(temp);
+            var temp = GetTempPdf();
+            var printer = await WeasyPrinter();
+            var css = Directory.EnumerateFiles(Path.GetDirectoryName(file), "*.css").FirstOrDefault();
+            var result = await printer.Print(File.ReadAllText(file), string.IsNullOrWhiteSpace(css) ? "" : $"-s {css}");
+            File.WriteAllBytes(temp, result.Bytes);
+            return temp;
         }
 
         public static Task<PrintOperationBase> PrintHtml(string title, string file)
@@ -175,6 +172,9 @@ namespace Avae.Printables
 
         public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
+            if(printer == null)
+                throw new ArgumentNullException(nameof(printer));
+
             var ext = Path.GetExtension(file).ToLower();
             if (Conversions.TryGetValue(ext, out var convertFunc))
             {

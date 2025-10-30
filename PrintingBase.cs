@@ -1,7 +1,18 @@
-﻿namespace Avae.Printables
+﻿using System.IO;
+
+namespace Avae.Printables
 {
     public class PrintingBase
     {
+        public static string GetTempPdf()
+        {
+            return Path.Combine(Path.GetTempPath(),
+                Printable.GENERATION == GENERATION.GUID ?
+                Guid.NewGuid().ToString() :
+                "temp.pdf");
+
+        }
+
         public delegate Task<string> ConversionDelegate(string file);
 
         private static Dictionary<string, ConversionDelegate> _conversions = new Dictionary<string, ConversionDelegate>()

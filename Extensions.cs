@@ -9,16 +9,56 @@ using Context = Android.Content.Context;
 
 namespace Avae.Printables
 {
+    /// <summary>
+    /// Determine if generated pdf is named temp.pdf or use a Guid
+    /// </summary>
+    public enum GENERATION
+    {
+        GUID,
+        UNIQUE
+    }
+
+    /// <summary>
+    /// Determine if html is rendering using Edge or not
+    /// </summary>
+    public enum RENDERING
+    {
+        EDGE,
+        PDF
+    }
+
 
     public static class Extensions
     {
 #if ANDROID
-        public static AppBuilder UsePrintables(this AppBuilder builder, Activity activity, Context context)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="activity"></param>
+        /// <param name="context"></param>
+        /// <param name="generation">Determine if generated pdf is named temp.pdf or use a Guid</param>
+        /// <returns></returns>
+        public static AppBuilder UsePrintables(this AppBuilder builder, Activity activity, Context context, GENERATION generation = GENERATION.UNIQUE)
 #elif WINDOWS10_0_19041_0_OR_GREATER
-        
-        public static AppBuilder UsePrintables(this AppBuilder builder, bool useEdge = false, bool isHybrid = false)
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="generation">Determine if generated pdf is named temp.pdf or use a Guid</param>
+        /// <param name="rendering">Determine if html is rendering using Edge or not</param>
+        /// <param name="isHybrid">Determine is running with alongside maui</param>
+        /// <returns></returns>
+        public static AppBuilder UsePrintables(this AppBuilder builder, GENERATION generation = GENERATION.UNIQUE, RENDERING rendering = RENDERING.PDF, bool isHybrid = false)
 #else
-        public static AppBuilder UsePrintables(this AppBuilder builder)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="builder"></param>
+        /// <param name="generation">Determine if generated pdf is named temp.pdf or use a Guid</param>
+        /// <returns></returns>
+        public static AppBuilder UsePrintables(this AppBuilder builder, GENERATION generation = GENERATION.UNIQUE)
 #endif
         {
 #if ANDROID
@@ -27,8 +67,9 @@ namespace Avae.Printables
             Printable.SetDefault(new PrintingService());
 #elif WINDOWS10_0_19041_0_OR_GREATER
             Printable.SetDefault(new PrintingService(isHybrid));
-            Printable.UseEdge = useEdge;
+            Printable.RENDERING = rendering;
 #endif
+            Printable.GENERATION = generation;
 
             return builder;
         }
@@ -41,13 +82,15 @@ namespace Avae.Printables
     /// </summary>
     public static class Printable
     {
+        public static GENERATION GENERATION { get; set; }
+
 #if WINDOWS10_0_19041_0_OR_GREATER
 
         /// <summary>
         /// Indicates whether the system should use the Microsoft Edge printing engine
         /// (for HTML or web-based print jobs) instead of internal PDF rendering.
         /// </summary>
-        public static bool UseEdge { get; set; }
+        public static RENDERING RENDERING { get; set; }
 #endif
 
         static IPrintingService defaultImplementation;
@@ -72,7 +115,7 @@ namespace Avae.Printables
         /// <param name="visuals">The visuals to print.</param>
         /// <param name="jobTitle">The title of the print job (displayed in printer queue).</param>
         /// <returns>A task representing the asynchronous print operation.</returns>
-        public static Task PrintAsync(IEnumerable<Visual> visuals, string jobTitle = "Title")
+        public static Task PrintVisualsAsync(IEnumerable<Visual> visuals, string jobTitle = "Title")
         {
             return Default.PrintVisualsAsync(visuals, jobTitle);
         }
@@ -109,7 +152,7 @@ namespace Avae.Printables
         /// </summary>
         /// <param name="jobTitle">The title displayed in the print dialog and queue.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public static Task PrintAsync(string jobTitle = "Title")
+        public static Task PrintVisualAsync(string jobTitle = "Title")
         {
             return Default.PrintVisualAsync(jobTitle);
         }

@@ -74,7 +74,7 @@ namespace Avae.Printables
 
         private static async Task<PrinterBase> PrintHtml(string title, string file)
         {
-            if (Printable.UseEdge)
+            if (Printable.RENDERING == RENDERING.EDGE)
             {
                 var printer = new HtmlPrinter(file);
                 await printer.ShowPrintUI();
@@ -85,6 +85,9 @@ namespace Avae.Printables
 
         public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
+            if(printer == null)
+                throw new ArgumentNullException(nameof(printer));
+
             var ext = Path.GetExtension(file).ToLower();
             var service = (PrintingService)Printable.Default;
             if (!service.Conversions.TryGetValue(ext, out var conversion))

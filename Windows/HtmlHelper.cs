@@ -2,7 +2,6 @@
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System.Diagnostics;
-using System.IO;
 using Windows.Foundation;
 
 namespace Avae.Printables
@@ -11,7 +10,7 @@ namespace Avae.Printables
     {
         private static async Task<string> PrintPdf(WebView2 webView)
         {
-            var path = Path.Combine(Path.GetTempPath(), "preview.pdf");
+            var temp = PrintingBase.GetTempPdf();
             var settings = webView.CoreWebView2.Environment.CreatePrintSettings();
             settings.ShouldPrintBackgrounds = true;
             settings.MarginBottom =
@@ -19,9 +18,9 @@ namespace Avae.Printables
             settings.MarginRight =
             settings.MarginTop = 0;
 
-            await webView.CoreWebView2.PrintToPdfAsync(path, settings);
+            await webView.CoreWebView2.PrintToPdfAsync(temp, settings);
             
-            return path;
+            return temp;
         }
 
         public static async Task<string> ConvertToPdf(string file)

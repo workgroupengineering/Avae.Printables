@@ -138,6 +138,9 @@ namespace Avae.Printables
 
         public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
+            if(printer == null)
+                throw new ArgumentNullException(nameof(printer));
+
             var ext = Path.GetExtension(file).ToLower();
             if (Conversions.TryGetValue(ext, out var convertFunc))
             {
@@ -200,10 +203,10 @@ namespace Avae.Printables
             await tcs.Task;
             await webView.EvaluateJavaScriptAsync(APPLY_CSS);
             using var data = await webView.CreatePdfAsync(new WKPdfConfiguration());
-            var pdfPath = Path.GetTempPath() + "temp.pdf";
-            using var pdfUrl = NSUrl.FromFilename(pdfPath);
+            var temp = GetTempPdf();
+            using var pdfUrl = NSUrl.FromFilename(temp);
             data.Save(pdfUrl, false);
-            return pdfPath;
+            return temp;
         }
 
         public static async Task PrintHtml(string title, string file)

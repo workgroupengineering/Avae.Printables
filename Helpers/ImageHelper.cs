@@ -12,7 +12,7 @@ namespace Avae.Printables
     {
         public static Task<string> ConvertToPdf(string file)
         {
-            var temp = Path.GetTempPath() + "temp.pdf";
+            var temp = PrintingBase.GetTempPdf();
             using (var doc = SKDocument.CreatePdf(temp))
             {
                 using var canvas = doc.BeginPage(595, 894);

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices.JavaScript;
 
 namespace Avae.Printables
 {
-    public partial class PrintingService : IPrintingService
+    public partial class PrintingService :PrintingBase, IPrintingService
     {
         public class Response
         {
@@ -70,7 +70,7 @@ namespace Avae.Printables
             string? base64 = null;
             string? mime = GetMimeType(ext);
 
-            if (_entries.TryGetValue(ext, out var entry))
+            if (((PrintingService)Printable.Default).Entries.TryGetValue(ext, out var entry))
             {
                 var tuple = await entry(file, stream);
                 base64 = tuple.Base64;

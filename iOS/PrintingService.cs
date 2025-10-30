@@ -7,7 +7,7 @@ using WebKit;
 
 namespace Avae.Printables
 {
-    public class PrintingService : IPrintingService
+    public class PrintingService :PrintingBase, IPrintingService
     {
         public delegate Task PrintDelegate(string title, string file);
 
@@ -138,9 +138,9 @@ namespace Avae.Printables
             const float A4_WIDTH = 595.28f;
             const float A4_HEIGHT = 841.89f;
 
-            var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pdf");
+            var temp = GetTempPdf();
 
-            using var stream = File.OpenWrite(filePath);
+            using var stream = File.OpenWrite(temp);
             using var document = SKDocument.CreatePdf(stream);
 
             foreach (var visual in visuals)
@@ -158,7 +158,7 @@ namespace Avae.Printables
 
             document.Close();
 
-            return filePath;
+            return temp;
         }
     }
 }

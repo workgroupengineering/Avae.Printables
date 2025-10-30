@@ -16,7 +16,7 @@ using Paint = Android.Graphics.Paint;
 
 namespace Avae.Printables
 {
-    public class PrintingService : IPrintingService
+    public class PrintingService : PrintingBase, IPrintingService
     {
         Activity activity;
         Context context;
@@ -137,19 +137,20 @@ namespace Avae.Printables
 
             pdf.FinishPage(page);
 
-            var path = System.IO.Path.GetTempPath() + "test.pdf";
-            using var temp = new FileStream(System.IO.Path.GetTempPath() + "test.pdf", FileMode.Create);
-            pdf.WriteTo(temp);
-            return path;
+            var temp = GetTempPdf();
+            using var fs = new FileStream(temp, FileMode.Create);
+            pdf.WriteTo(fs);
+            return temp;
         }
 
         public async Task PrintVisualsAsync(IEnumerable<Visual> visuals, string title = "Title")
         {
             const float pageWidth = 612f;  // Letter portrait
             const float pageHeight = 792f;
-            var file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "print.pdf");
+            
+            var temp = GetTempPdf();
 
-            using var doc = SKDocument.CreatePdf(file);
+            using var doc = SKDocument.CreatePdf(temp);
 
             foreach (var visual in visuals)
             {
@@ -160,7 +161,7 @@ namespace Avae.Printables
             }
 
             doc.Close();
-            await PrintAsync(file, null, title);
+            await PrintAsync(temp, null, title);
         }
     }
 }
