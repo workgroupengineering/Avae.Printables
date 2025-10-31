@@ -1,6 +1,5 @@
 ﻿#if BROWSER
 using Avalonia;
-using Microsoft.AspNetCore.StaticFiles;
 using System.Runtime.InteropServices.JavaScript;
 
 namespace Avae.Printables

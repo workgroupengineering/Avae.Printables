@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Avae.Printables</PackageId>
-    <Version>3.0.4</Version>
+    <Version>3.0.6</Version>
     <Authors>cedricb</Authors>
     <Product>Avae.Printables</Product>
     <Description>Printing for avalonia</Description>
@@ -21,7 +21,6 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.1.3" />
     <PackageReference Include="Avalonia.Skia" Version="11.1.3" />
-    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.3.0" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="" />
@@ -46,6 +45,7 @@
     <PackageReference Include="Avalonia.X11" Version="11.1.3" />
     <PackageReference Include="Weasyprint.Wrapped" Version="7.0.1" />
   </ItemGroup>
+
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
     <PackageReference Include="Avalonia.iOS" Version="11.1.3" />
   </ItemGroup>

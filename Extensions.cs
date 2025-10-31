@@ -1,5 +1,4 @@
 ﻿using Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 
 #if ANDROID

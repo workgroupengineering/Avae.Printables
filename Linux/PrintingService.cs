@@ -4,6 +4,7 @@ using Gtk;
 using SkiaSharp;
 using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Weasyprint.Wrapped;
 using WebKit;
@@ -24,7 +25,22 @@ namespace Avae.Printables
                 await _semaphore.WaitAsync();
                 if (printer == null)
                 {
-                    printer = new Printer();
+                    var config = new ConfigurationProvider();
+                    var asset = config.GetAsset();
+                    if (!File.Exists(asset))
+                    {
+                        using var client = new HttpClient();
+                        using var response = await client.GetAsync("https://github.com/berthertogen/weasyprint.wrapped/releases/latest/download/standalone-linux-64.zip");
+                        if(response.StatusCode != HttpStatusCode.OK)
+                        {
+                            throw new Exception("Failed to download WeasyPrint asset.", new Exception(response.ReasonPhrase));
+                        }
+                        using var stream = await response.Content.ReadAsStreamAsync();
+                        using var zip = File.OpenWrite(asset);
+                        stream.CopyTo(zip);
+                    }
+                    
+                    printer = new Printer(config);
                     await printer.Initialize();
                 }
                 _semaphore.Release();
@@ -102,10 +118,21 @@ namespace Avae.Printables
 
         private async static Task<string> HtmlToPdf(string file)
         {
+            file = WebUtility.UrlDecode(file).Replace("file://", string.Empty);
             var temp = GetTempPdf();
             var printer = await WeasyPrinter();
-            var css = Directory.EnumerateFiles(Path.GetDirectoryName(file), "*.css").FirstOrDefault();
-            var result = await printer.Print(File.ReadAllText(file), string.IsNullOrWhiteSpace(css) ? "" : $"-s {css}");
+            string css = string.Empty;
+            var directory = Path.GetDirectoryName(file);
+            if(!string.IsNullOrWhiteSpace(directory))
+            {
+                directory = WebUtility.UrlDecode(directory);
+                var cssFile = Directory.EnumerateFiles(directory, "*.css").FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(cssFile))
+                {
+                    css = $"-s {cssFile}";
+                }
+            }
+            var result = await printer.Print(File.ReadAllText(file), css);
             File.WriteAllBytes(temp, result.Bytes);
             return temp;
         }
@@ -172,7 +199,7 @@ namespace Avae.Printables
 
         public async Task<bool> PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "Silent job")
         {
-            if(printer == null)
+            if (printer == null)
                 throw new ArgumentNullException(nameof(printer));
 
             var ext = Path.GetExtension(file).ToLower();
