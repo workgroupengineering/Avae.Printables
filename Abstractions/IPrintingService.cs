@@ -34,6 +34,6 @@ namespace Avae.Printables
 
     public class PrintablePrinter
     {
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 }

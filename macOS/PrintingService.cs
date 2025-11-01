@@ -101,7 +101,10 @@ namespace Avae.Printables
 
                 visuals.Add(textBlock);
             }
-            await ((PrintingService)Printable.Default).PrintVisualsAsync(visuals, title);
+            var service = Printable.Default as PrintingService;
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+            await service.PrintVisualsAsync(visuals, title);
         }
 
         public async Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
@@ -153,6 +156,9 @@ namespace Avae.Printables
                 UseShellExecute = false
             };
             using var process = Process.Start(pStartInfo);
+            if(process == null)
+                return false;
+
             string stdout = process.StandardOutput.ReadToEnd();
             string stderr = process.StandardError.ReadToEnd();
             await process.WaitForExitAsync();
@@ -193,7 +199,7 @@ namespace Avae.Printables
             webView.NavigationDelegate = new NavigationDelegate(tcs);
 
             using var fileUrl = NSUrl.FromFilename(file); // full path to your HTML file
-            using var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(file)); // directory containing the file
+            using var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(file)!); // directory containing the file
 
             webView.LoadFileUrl(fileUrl, baseDir);
             // Wait for load to finish
@@ -214,7 +220,7 @@ namespace Avae.Printables
             webView.NavigationDelegate = new NavigationDelegate(tcs);
 
             using var fileUrl = NSUrl.FromFilename(file); // full path to your HTML file
-            using var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(file)); // directory containing the file
+            using var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(file)!); // directory containing the file
 
             webView.LoadFileUrl(fileUrl, baseDir);
             // Wait for load to finish

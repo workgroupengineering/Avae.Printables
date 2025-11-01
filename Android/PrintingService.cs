@@ -51,7 +51,10 @@ namespace Avae.Printables
 
         private static Task PrintImage(string title, string file)
         {
-            return ((PrintingService)Printable.Default).PrintAsync(BitmapToPdf(file), null, title);
+            var service = Printable.Default as PrintingService;
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+            return service.PrintAsync(BitmapToPdf(file), null, title);
         }
 
         private static async Task PrintTxt(string title, string file)
@@ -75,27 +78,39 @@ namespace Avae.Printables
 
                 visuals.Add(textBlock);
             }
-            await ((PrintingService)Printable.Default).PrintVisualsAsync(visuals, title);
+            var service = Printable.Default as PrintingService;
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+
+            await service.PrintVisualsAsync(visuals, title);
         }
 
         public static Task PrintHtml(string title, string file)
         {
-            var activity = ((PrintingService)Printable.Default).activity;
-            var context = ((PrintingService)Printable.Default).context;
+            var service = Printable.Default as PrintingService;
+            if(service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+            
+            var activity = service.activity;
+            var context = service.context;
 
-            var webView = new WebView(activity);
+            var webView = new WebView(context);
             webView.LoadDataWithBaseURL(null, File.ReadAllText(file), "text/html", "utf-8", null);
-            var printManager = (PrintManager)context.GetSystemService(Context.PrintService);
+            var printManager = context?.GetSystemService(Context.PrintService) as PrintManager;
             var printAdapter = webView.CreatePrintDocumentAdapter("MyHTMLDocument");
-            printManager.Print(title, printAdapter, null);
+            printManager?.Print(title, printAdapter, null);
             return Task.CompletedTask;
         }
 
         private static Task PrintPdf(string title, string file)
         {
-            var activity = ((PrintingService)Printable.Default).activity;
+            var service = Printable.Default as PrintingService;
 
-            var printManager = (PrintManager)activity.GetSystemService(Context.PrintService);
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+            var activity = service.activity;
+
+            var printManager = activity?.GetSystemService(Context.PrintService) as PrintManager;
 
             // Now we can use the preexisting print helper class
             var adapter = new PrintAdapter(file);
@@ -121,7 +136,13 @@ namespace Avae.Printables
         private static string BitmapToPdf(string file)
         {
             using var bitmap = BitmapFactory.DecodeFile(file);
-            using PrintedPdfDocument pdf = new PrintedPdfDocument(((PrintingService)Printable.Default).context,
+            if(bitmap == null)
+                throw new FileNotFoundException("Could not decode image file.", file);
+
+            var service = Printable.Default as PrintingService;
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+            using PrintedPdfDocument pdf = new PrintedPdfDocument(service.context,
             new PrintAttributes.Builder()
                     .SetMediaSize(PrintAttributes.MediaSize.IsoA4) // A4 size
                     .SetMinMargins(new PrintAttributes.Margins(0, 0, 0, 0))
@@ -131,9 +152,9 @@ namespace Avae.Printables
             using var page = pdf.StartPage(pageInfo);
 
             // Draw the bitmap on the page
-            var canvas = page.Canvas;
+            var canvas = page?.Canvas;
             var paint = new Paint(PaintFlags.FilterBitmap);
-            canvas.DrawBitmap(bitmap, 0, 0, paint);
+            canvas?.DrawBitmap(bitmap, 0, 0, paint);
 
             pdf.FinishPage(page);
 

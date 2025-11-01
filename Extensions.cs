@@ -92,12 +92,12 @@ namespace Avae.Printables
         public static RENDERING RENDERING { get; set; }
 #endif
 
-        static IPrintingService defaultImplementation;
+        static IPrintingService? defaultImplementation;
 
         /// <summary>
         /// Provides the default implementation for static usage of this API.
         /// </summary>
-        public static IPrintingService Default =>
+        public static IPrintingService? Default =>
             defaultImplementation;
 
         /// <summary>
@@ -116,6 +116,9 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous print operation.</returns>
         public static Task PrintVisualsAsync(IEnumerable<Visual> visuals, string jobTitle = "Title")
         {
+            if(Default == null)
+                return Task.CompletedTask;
+            
             return Default.PrintVisualsAsync(visuals, jobTitle);
         }
 
@@ -129,6 +132,8 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous print operation.</returns>
         public static Task PrintAsync(string file, Stream? stream = null, string jobTitle = "Title")
         {
+            if (Default == null)
+                return Task.CompletedTask;
             return Default.PrintAsync(file, stream, jobTitle);
         }
 
@@ -142,6 +147,8 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous print operation.</returns>
         public static Task PrintAsync(PrintablePrinter printer, string file, string ouputfilename = "")
         {
+            if (Default == null)
+                return Task.CompletedTask;
             return Default.PrintAsync(printer, file, ouputfilename);
         }
 
@@ -153,6 +160,8 @@ namespace Avae.Printables
         /// <returns>A task representing the asynchronous operation.</returns>
         public static Task PrintVisualAsync(string jobTitle = "Title")
         {
+            if (Default == null)
+                return Task.CompletedTask;
             return Default.PrintVisualAsync(jobTitle);
         }
 
@@ -165,6 +174,8 @@ namespace Avae.Printables
         /// </returns>
         public static Task<IEnumerable<PrintablePrinter>> GetPrintersAsync()
         {
+            if (Default == null)
+                return Task.FromResult(Enumerable.Empty<PrintablePrinter>());
             return Default.GetPrintersAsync();
         }
     }

@@ -60,9 +60,9 @@ namespace Avae.Printables
             webView.NavigationDelegate = new MyDelegate(tcs);
 
             var fileUrl = NSUrl.FromFilename(html); // full path to your HTML file
-            var baseDir = NSUrl.FromFilename(Path.GetDirectoryName(html)); // directory containing the file
-
-            webView.LoadFileUrl(fileUrl, baseDir);
+            var directory = Path.GetDirectoryName(html);
+            directory ??= string.Empty;
+            webView.LoadFileUrl(fileUrl, NSUrl.FromFilename(directory));
             // Wait for load to finish
             await tcs.Task;
 
@@ -102,7 +102,6 @@ namespace Avae.Printables
                 var url = NSUrl.FromFilename(file);
                 Debug.WriteLine($"URL Valid: {url.CheckPromisedItemIsReachable(out _).ToString()}");
                 print.PrintingItem = url;
-                print.ShowsPageRange = true;
                 print.Present(true, (handler, completed, error) =>
                 {
                     if (!completed && error != null)

@@ -89,7 +89,10 @@ namespace Avae.Printables
                 throw new ArgumentNullException(nameof(printer));
 
             var ext = Path.GetExtension(file).ToLower();
-            var service = (PrintingService)Printable.Default;
+            var service = Printable.Default as PrintingService;
+            if (service == null)
+                throw new InvalidOperationException("PrintingService is not initialized.");
+
             if (!service.Conversions.TryGetValue(ext, out var conversion))
                 throw new NotSupportedException($"The file extension '{ext}' is not supported for silent printing.");
 
@@ -100,7 +103,7 @@ namespace Avae.Printables
             var pdfDoc = await PdfDocument.LoadFromFileAsync(pdfFile);
 
             var spool = new SpoolHelper();
-            return spool.Print(printer.Name, ouputfilename, ticket, pdfDoc);
+            return spool.Print(printer.Name ?? string.Empty, ouputfilename, ticket, pdfDoc);
         }
 
         public async Task PrintAsync(string file, Stream? stream = null, string title = "Title")
@@ -132,9 +135,9 @@ namespace Avae.Printables
 
         public static IntPtr GetActiveWindow()
         {
-            if (Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopStyleApplicationLifetime)
+            if (Application.Current!.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopStyleApplicationLifetime)
             {
-                return desktopStyleApplicationLifetime.MainWindow.TryGetPlatformHandle().Handle;
+                return desktopStyleApplicationLifetime.MainWindow!.TryGetPlatformHandle()!.Handle;
             }
             return IntPtr.Zero;
         }

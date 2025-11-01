@@ -7,11 +7,11 @@ namespace Avae.Printables
 {
     public class PrintAdapter(string printFileName) : PrintDocumentAdapter
     {
-        public override void OnLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, CancellationSignal cancellationSignal, LayoutResultCallback callback, Bundle extras)
+        public override void OnLayout(PrintAttributes? oldAttributes, PrintAttributes? newAttributes, CancellationSignal? cancellationSignal, LayoutResultCallback? callback, Bundle? extras)
         {
-            if (cancellationSignal.IsCanceled)
+            if (true == cancellationSignal?.IsCanceled)
             {
-                callback.OnLayoutCancelled();
+                callback?.OnLayoutCancelled();
                 return;
             }
 
@@ -19,16 +19,16 @@ namespace Avae.Printables
                 .SetContentType(PrintContentType.Document)
                 .Build();
 
-            callback.OnLayoutFinished(pdi, true);
+            callback?.OnLayoutFinished(pdi, true);
         }
 
-        public override void OnWrite(PageRange[] pages, ParcelFileDescriptor destination, CancellationSignal cancellationSignal, WriteResultCallback callback)
+        public override void OnWrite(PageRange[]? pages, ParcelFileDescriptor? destination, CancellationSignal? cancellationSignal, WriteResultCallback? callback)
         {
-            using (var fileOutputStream = new FileOutputStream(destination.FileDescriptor))
+            using (var fileOutputStream = new FileOutputStream(destination?.FileDescriptor))
             {
                 fileOutputStream.Write(System.IO.File.ReadAllBytes(printFileName));
             }
-            callback.OnWriteFinished(new[] { PageRange.AllPages });
+            callback?.OnWriteFinished(new[] { PageRange.AllPages! });
         }
     }
 }

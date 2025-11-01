@@ -13,25 +13,25 @@ namespace Avae.Printables
         /// PrintDocument is used to prepare the pages for printing.
         /// Prepare the pages to print in the handlers for the Paginate, GetPreviewPage, and AddPages events.
         /// </summary>
-        protected PrintDocument printDocument;
+        protected PrintDocument? printDocument;
 
         /// <summary>
         /// Marker interface for document source
         /// </summary>
-        public IPrintDocumentSource printDocumentSource;
+        public IPrintDocumentSource? printDocumentSource;
 
         /// <summary>
         /// A list of UIElements used to store the print preview pages.  This gives easy access
         /// to any desired preview page.
         /// </summary>
-        protected List<UIElement> printPreviewPages;
-        internal IEnumerable<Visual> visuals;
-        protected string file;
-        private string title;
-        private IntPtr handle;
+        protected List<UIElement> printPreviewPages = new List<UIElement>();
+        internal IEnumerable<Visual> visuals = [];
+        protected string file = string.Empty;
+        private string title = string.Empty;
+        private IntPtr handle = IntPtr.Zero;
 
         /// <summary>
-        /// Constructor
+        /// Constructor²
         /// </summary>
         /// <param name="scenarioPage">The scenario page constructing us</param>
         public PrinterBase(nint handle, string title, IEnumerable<Visual> visuals)
